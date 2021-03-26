@@ -6,7 +6,7 @@ This is a project to convert a csv file inside a S3 bucket into a dynamodb table
 
 The image above is from the cloudformation template that creates the components necessary for the job. When a file is uploaded to the S3 bucket an event starts the lambda function that will read the csv from the bucket and insert the data on the dynamodb table. The cloudformation creates the permissions and the role needed for the lambda function log to cloudwatch, access the S3 bucket and insert data on the table.
 
-The project was developd using the aws serverless application model ([sam](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html)). Sam is a framework to build serverless applications and makes it easier to test serverless applications locally with it's cli.
+The project was developd using the aws serverless application model ([sam](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html)). Sam is a framework to build serverless applications that makes it easier to test the code locally with it's cli. Sam is an extension of cloudformation, so I've defined the resources using cloudformation in the sam template.
 
 ## Getting started
 
