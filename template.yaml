@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  etl-csv-s3-dynamo
+
+Parameters:
+  etlfunctionname:
+    Type: String
+    Default: 'etl-function-csv-to-dynamo'
+    Description: 'Lambda function name that will perform the etl job'
+  s3bucketname:
+    Type: String
+    Default: 'etl-lambda-dynamotable-bucket'
+    Description: 'Name for the s3 bucket that will hold the file for the etl job'
+  tablename:
+    Type: String
+    Default: 'etl-dynamo-db'
+    Description: 'Name for the dynamodb table that will store the data from the etl job'
+
+
+Resources:
+  etlfunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref etlfunctionname
+      CodeUri: function/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 300
+      Role: !GetAtt lambdarole.Arn
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref etlbucket
+            Events: s3:ObjectCreated:*
+      Environment:
+        Variables:
+          BATCH_SIZE: 100
+          TABLE_NAME: !Ref tablename
+
+  etlbucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref s3bucketname
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt etlfunction.Arn
+
+  dynamotable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+        TableName: !Ref tablename
+        BillingMode: 'PROVISIONED'
+        AttributeDefinitions:
+          -
+            AttributeName: 'show_id'
+            AttributeType: 'S'
+        KeySchema:
+          -
+            AttributeName: 'show_id'
+            KeyType: 'HASH'
+        ProvisionedThroughput:
+          ReadCapacityUnits: "2"
+          WriteCapacityUnits: "2"
+
+  lambdarole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
+      Policies:
+        - PolicyName: etllambdadynamo
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:DeleteItem'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:BatchWriteItem'
+                Resource: !GetAtt dynamotable.Arn
+
+  lambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt etlfunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
