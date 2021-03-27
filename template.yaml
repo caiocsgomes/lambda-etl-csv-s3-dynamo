@@ -91,7 +91,7 @@ Resources:
                   - 'dynamodb:BatchWriteItem'
                 Resource: !GetAtt dynamotable.Arn
 
-  lambdaPermission:
+  lambdapermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
       FunctionName: !GetAtt etlfunction.Arn
